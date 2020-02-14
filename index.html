@@ -1,0 +1,183 @@
+<!doctype HTML>
+<html>
+	<head>
+		<title>Testing facebook SDK & graph api </title>
+		<!-- Latest compiled and minified CSS -->
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+		<!-- Optional theme -->
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+
+		<!-- Latest compiled and minified JavaScript -->
+		<script type="text/javascript" src="//code.jquery.com/jquery-1.12.4.js"></script>
+		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"></script>
+		<script src="http://connect.facebook.net/en_US/all.js"></script>
+	</head>
+	<body>
+		<div class="row">
+			<div class="col-md-6 col-md-offset-3 col-sm-8 col-sm-offset-2 col-xs-12 text-center">
+				<h1>Facebook SDK login & logout</h1>
+				<button class="btn btn-primary" id="fb_login" onclick="loginToFB()">login</button>
+				<button id="fb_logout" class="btn btn-danger hidden" onclick="logoutFB()">
+					Logout
+				</button>
+				<hr>
+				<div class="text-success" id="loginStatus"></div>
+				<hr>
+				<h2>Graph API</h2>
+				<button id="nameBtn" class="btn btn-info"  onclick="getName()">get name</button>
+				<button id="emailBtn" class="btn btn-info" onclick="getEmail()">get email address</button>
+				<button id="picBtn" class="btn btn-info"  onclick="getPhoto()">get picture</button>
+				<button id="friendsBtn" class="btn btn-info" onclick="getFriendsCount()">get friends count</button>
+				<button id="friendsBtn" class="btn btn-info" onclick="getAllInfo()">get all info</button>
+				<hr>
+				<div class="container-fluid">
+					<div class="row">
+						<div class="col-md-6 col-sm-12 col-xs-12">
+							<div id='picture' class="pull-left"></div>
+						</div>
+						<div class="col-md-6 col-sm-12 col-xs-12">
+							<div class="text-info text-left" id="message"></div>
+						</div>
+					</div>
+				</div>
+				<hr>
+			</div>
+		</div>
+		<script type="text/javascript">
+			console.log('script loaded');
+
+			FB.init({
+			    appId: '176909290277949',
+			    status: true, 
+			    cookie: true, 
+			    xfbml: true
+			});
+
+			function loginToFB() {//calling graph api afte login to get details 
+				FB.login(function(response) {
+				    if (response.authResponse) {
+				     console.log('Welcome!  Fetching your information.... ');
+				     // can also replace me with /${userId} of logged in facebook user
+				     FB.api('/me', function(response) {
+				     	$('#loginStatus').html("");
+				     	$('#loginStatus').append("Good to see you " + response.name);
+				     	$('#fb_logout').removeClass('hidden');
+				     });
+				    } else {
+				     console.log('User cancelled login or did not fully authorize.');
+				    }
+				},
+				{
+            		scope: 'email, user_birthday, user_friends'
+        		});
+			}
+
+			function logoutFB() {//calling graph api afte login to get details 
+				FB.logout(function(response) {
+   						// Person is now logged out
+   					$('#loginStatus').html("");
+				    $('#loginStatus').append("You are successfully logged out");
+				    $('#fb_logout').addClass('hidden');
+				});
+			}
+
+			function isLoggedIn() {
+				var loggedIn = false
+				FB.getLoginStatus(function(response) { 
+					if (response.status === 'connected') {   
+      					loggedIn = true ;
+    				} else { 
+    					loggedIn =false;
+    				}
+				})
+				return loggedIn
+			}
+
+			//just getting name using graph api without login
+			function getName() {
+				if(isLoggedIn()){
+					testGraphAPI("me", "", ["name"]);  
+				} else {
+					showLogoutMessage()
+				}
+			}  
+
+			function getPhoto(){
+				if(isLoggedIn()){
+					testGraphAPI("me", "", ["picture.width(240)"]);  
+
+				} else {
+					showLoggedOutMessage()
+				}
+			} 
+
+			function getEmail(){
+				if(isLoggedIn()){
+					testGraphAPI("me", "", ["email"]);  
+				} else {
+					showLoggedOutMessage();
+				}
+			}  
+
+			function getFriendsCount(){
+				if(isLoggedIn()){
+					testGraphAPI("me", "", ["friends"]);  
+				} else {
+					showLoggedOutMessage();
+				}
+			}
+
+			function getAllInfo(){
+				if(isLoggedIn()){
+					testGraphAPI("me", "", ["name", "email", "picture.width(240)", "friends"]);  
+				} else {
+					showLoggedOutMessage();
+				}
+			}
+
+			function testGraphAPI(node, edge, fields) {
+				var url = "me"
+				if(node !==''){
+					url = "/"+ node
+					if(edge !== ''){
+						url = url + "/" + edge
+					}
+					if(fields.length >0){
+						url = url + "?fields=" + fields.join(',')
+					}
+				}
+
+				console.log('url' + url);
+				FB.api(url, function (response) {
+			    	$('#message').html("");
+			    	$('#picture').html("");
+			    	console.log(response);
+			    	if(fields.length > 0) {
+			    		for (var i = fields.length - 1; i >= 0; i--) {
+			    			var fieldName = fields[i];
+			    			var message = response[fieldName]
+			    			if(fieldName === 'picture.width(240)'){ 
+			    				message = '';
+			    				$('#picture').append('<img class="thumbnail text-center" src='+ response.picture.data.url + '>');
+							}
+							if(fieldName === 'friends') {
+								console.log(response.friends.summary.total_count);
+								message =  response.friends.summary.total_count
+							}
+			    			message !== '' ? $('#message').append('<p><span class="text-danger">' +fieldName +"<span>: " + message + '</p>') : ''
+			    		}
+			    	}
+			    	else{
+			    		$('#message').append('<div class="well well-sm"> <b>Your name</b>' + response.name + '</div>');
+			    	}   
+			    });
+			}
+
+			function showLoggedOutMessage() {
+				$('#message').html("");
+				$('#message').append("You are currently logged out, please login again");
+			}
+		</script>
+	</body>
+</html>
